@@ -10,18 +10,19 @@ using System.Text.Json.Nodes;
 using System.Web;
 using System.Xml.Linq;
 using Shared.Config;
+
 public static class HttpUtils
 {
-    public static async Task StructuredLogging(HttpListenerRequest req,
-    HttpListenerResponse res, Hashtable props, Func<Task> next)
+    public static async Task StructuredLogging(HttpListenerRequest req, HttpListenerResponse res, Hashtable props, Func<Task> next)
     {
-        var requestId = props["req.id"]?.ToString() ??
-        Guid.NewGuid().ToString("n").Substring(0, 12);
+        var requestId = props["req.id"]?.ToString() ?? Guid.NewGuid().ToString("n").Substring(0, 12);
         var startUtc = DateTime.UtcNow;
         var method = req.HttpMethod ?? "UNKNOWN";
         var url = req.Url!.OriginalString ?? req.Url!.ToString();
         var remote = req.RemoteEndPoint.ToString() ?? "unknown";
+
         res.Headers["X-Request-Id"] = requestId;
+
         try
         {
             await next();
@@ -46,8 +47,7 @@ public static class HttpUtils
         }
     }
 
-    public static async Task CentralizedErrorHandling(HttpListenerRequest req,
-    HttpListenerResponse res, Hashtable props, Func<Task> next)
+    public static async Task CentralizedErrorHandling(HttpListenerRequest req, HttpListenerResponse res, Hashtable props, Func<Task> next)
     {
         try
         {
@@ -74,11 +74,9 @@ public static class HttpUtils
         }
     }
     
-    public static async Task ServeStaticFiles(HttpListenerRequest req,
-    HttpListenerResponse res, Hashtable props, Func<Task> next)
+    public static async Task ServeStaticFiles(HttpListenerRequest req, HttpListenerResponse res, Hashtable props, Func<Task> next)
     {
-        string rootDir = Configuration.Get("root.dir",
-        Directory.GetCurrentDirectory())!;
+        string rootDir = Configuration.Get("wwwroot.dir", Directory.GetCurrentDirectory())!;
         string urlPath = req.Url!.AbsolutePath.TrimStart('/');
         string filePath = Path.Combine(rootDir, urlPath.Replace('/',
         Path.DirectorySeparatorChar));
@@ -161,21 +159,15 @@ public static class HttpUtils
     public static NameValueCollection ParseUrl(string url)
     {
         int i = -1;
-        var (scheme, apqf) = (i = url.IndexOf("://")) >= 0
-        ? (url.Substring(0, i), url.Substring(i + 3)) : ("", url);
-        var (auth, pqf) = (i = apqf.IndexOf("/")) >= 0
-        ? (apqf.Substring(0, i), apqf.Substring(i)) : (apqf, "");
-        var (up, hp) = (i = auth.IndexOf("@")) >= 0
-        ? (auth.Substring(0, i), auth.Substring(i + 1)) : ("", auth);
-        var (user, pass) = (i = up.IndexOf(":")) >= 0
-        ? (up.Substring(0, i), up.Substring(i + 1)) : (up, "");
-        var (host, port) = (i = hp.IndexOf(":")) >= 0
-        ? (hp.Substring(0, i), hp.Substring(i + 1)) : (hp, "");
-        var (pq, fragment) = (i = pqf.IndexOf("#")) >= 0
-        ? (pqf.Substring(0, i), pqf.Substring(i + 1)) : (pqf, "");
-        var (path, query) = (i = pq.IndexOf("?")) >= 0
-        ? (pq.Substring(0, i), pq.Substring(i + 1)) : (pq, "");
+        var (scheme, apqf) = (i = url.IndexOf("://")) >= 0 ? (url.Substring(0, i), url.Substring(i + 3)) : ("", url);
+        var (auth, pqf) = (i = apqf.IndexOf("/")) >= 0 ? (apqf.Substring(0, i), apqf.Substring(i)) : (apqf, "");
+        var (up, hp) = (i = auth.IndexOf("@")) >= 0 ? (auth.Substring(0, i), auth.Substring(i + 1)) : ("", auth);
+        var (user, pass) = (i = up.IndexOf(":")) >= 0 ? (up.Substring(0, i), up.Substring(i + 1)) : (up, "");
+        var (host, port) = (i = hp.IndexOf(":")) >= 0 ? (hp.Substring(0, i), hp.Substring(i + 1)) : (hp, "");
+        var (pq, fragment) = (i = pqf.IndexOf("#")) >= 0 ? (pqf.Substring(0, i), pqf.Substring(i + 1)) : (pqf, "");
+        var (path, query) = (i = pq.IndexOf("?")) >= 0 ? (pq.Substring(0, i), pq.Substring(i + 1)) : (pq, "");
         var parts = new NameValueCollection();
+
         // https://john:abc123@site.com:8080/api/v1/users/3?q=0&active=true#bio
         // scheme://user:pass@host:port/path?query#fragment
         // Splits:1 4 3 5 2 7 6
@@ -186,6 +178,7 @@ public static class HttpUtils
         // 5 host port
         // 6 /path?query fragment
         // 7 /path query
+
         parts["scheme"] = scheme; // https
         parts["auth"] = auth; // john:abc123@site.com:8080
         parts["user"] = user; // john
@@ -324,12 +317,14 @@ public static class HttpUtils
     {
         await SendNotFoundResponse(req, res, props, string.Empty, "text/plain");
     }
+
     public static async Task SendNotFoundResponse(HttpListenerRequest req,
     HttpListenerResponse res, Hashtable props, string content)
     {
         await SendNotFoundResponse(req, res, props, content,
         DetectContentType(content));
     }
+
     public static async Task SendNotFoundResponse(HttpListenerRequest req,
     HttpListenerResponse res, Hashtable props,
     string content, string contentType)
@@ -344,6 +339,7 @@ public static class HttpUtils
         await SendResponse(req, res, props, statusCode, content,
         DetectContentType(content));
     }
+
     public static async Task SendResponse(HttpListenerRequest req,
     HttpListenerResponse res, Hashtable props, int statusCode,
     string content, string contentType)
@@ -351,6 +347,7 @@ public static class HttpUtils
         await SendResponse(req, res, props, statusCode,
         Encoding.UTF8.GetBytes(content), DetectContentType(content));
     }
+
     public static async Task SendResponse(HttpListenerRequest req,
     HttpListenerResponse res, Hashtable props, int statusCode,
     byte[] content, string contentType)
@@ -363,8 +360,7 @@ public static class HttpUtils
         res.Close();
     }
 
-    public static async Task SendResultResponse<T>(HttpListenerRequest req,
-HttpListenerResponse res, Hashtable props, Result<T> result)
+    public static async Task SendResultResponse<T>(HttpListenerRequest req, HttpListenerResponse res, Hashtable props, Result<T> result)
     {
         if (result.IsError)
         {
@@ -379,9 +375,7 @@ HttpListenerResponse res, Hashtable props, Result<T> result)
         }
     }
 
-    public static async Task SendPagedResultResponse<T>(HttpListenerRequest req,
-HttpListenerResponse res, Hashtable props,
-Result<PagedResult<T>> result, int page, int size)
+    public static async Task SendPagedResultResponse<T>(HttpListenerRequest req, HttpListenerResponse res, Hashtable props, Result<PagedResult<T>> result, int page, int size)
     {
         if (result.IsError)
         {
@@ -398,29 +392,23 @@ Result<PagedResult<T>> result, int page, int size)
         }
     }
 
-    public static void AddPaginationHeaders<T>(HttpListenerRequest req,
-HttpListenerResponse res, Hashtable props,
-PagedResult<T> pagedResult, int page, int size)
+    public static void AddPaginationHeaders<T>(HttpListenerRequest req, HttpListenerResponse res, Hashtable props, PagedResult<T> pagedResult, int page, int size)
     {
-        var baseUrl =
-        $"{req.Url!.Scheme}://{req.Url!.Authority}{req.Url!.AbsolutePath}";
-        int totalPages =
-        Math.Max(1, (int)Math.Ceiling((double)pagedResult.TotalCount / size));
-        string self =
-        $"{baseUrl}?page={page}&size={size}";
-        string? first =
-        page == 1 ? null : $"{baseUrl}?page={1}&size={size}";
-        string? last =
-        page == totalPages ? null : $"{baseUrl}?page={totalPages}&size={size}";
-        string? prev =
-        page > 1 ? $"{baseUrl}?page={page - 1}&size={size}" : null;
-        string? next =
-        page < totalPages ? $"{baseUrl}?page={page + 1}&size={size}" : null;
+        var baseUrl = $"{req.Url!.Scheme}://{req.Url!.Authority}{req.Url!.AbsolutePath}";
+        int totalPages = Math.Max(1, (int)Math.Ceiling((double)pagedResult.TotalCount / size));
+
+        string self = $"{baseUrl}?page={page}&size={size}";
+        string? first = page == 1 ? null : $"{baseUrl}?page={1}&size={size}";
+        string? last = page == totalPages ? null : $"{baseUrl}?page={totalPages}&size={size}";
+        string? prev = page > 1 ? $"{baseUrl}?page={page - 1}&size={size}" : null;
+        string? next = page < totalPages ? $"{baseUrl}?page={page + 1}&size={size}" : null;
+
         res.Headers["Content-Type"] = "application/json; charset=utf-8";
         res.Headers["X-Total-Count"] = pagedResult.TotalCount.ToString();
         res.Headers["X-Page"] = page.ToString();
         res.Headers["X-Page-Size"] = size.ToString();
         res.Headers["X-Total-Pages"] = totalPages.ToString();
+        
         // Optional RFC 5988 Link header for discoverability
         var linkParts = new List<string>();
         if (prev != null) { linkParts.Add($"<{prev}>; rel=\"prev\""); }

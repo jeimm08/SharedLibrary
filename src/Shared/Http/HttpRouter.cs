@@ -57,8 +57,11 @@ public class HttpRouter
         var req = ctx.Request;
         var res = ctx.Response;
         var props = new Hashtable();
+
         res.StatusCode = RESPONSE_NOT_SENT;
+
         props["req.id"] = ++requestId;
+        
         try
         {
             await HandleAsync(req, res, props, () => Task.CompletedTask);
